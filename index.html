@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Падающие Картинки</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/5.0.0/css/bootstrap.min.css">
+    <style>
+        body {
+    overflow: hidden;
+    background-color: #b0076a; /* Темный фон для контраста */
+    color: #e0e0e0; /* Светлый цвет текста */
+    font-family: Arial, sans-serif;
+}
+
+.falling-img {
+    position: absolute;
+    width: 50px;
+    height: 50px;
+}
+
+#score {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    font-size: 24px;
+}
+
+.control-buttons {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+}
+
+.btn {
+    border-radius: 8px; /* Скругление углов кнопок */
+    padding: 10px 15px;
+    margin: 5px;
+}
+
+.btn-success {
+    background-color: #4CAF50; /* Зеленый цвет */
+}
+
+.btn-danger {
+    background-color: #f44336; /* Красный цвет */
+}
+
+.btn-primary {
+    background-color: #2196F3; /* Синий цвет */
+}
+
+.shop {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%; /* Ширина для мобильных устройств */
+    max-width: 400px; /* Максимальная ширина */
+    background-color: #1e1e1e; /* Черный фон магазина */
+    border-radius: 10px; /* Скругление углов */
+    padding: 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+}
+
+.shop img {
+    width: 50px;
+    height: 50px;
+    cursor: pointer;
+    margin: 5px; /* Отступ между картинками */
+}
+
+.shop img.bought {
+    opacity: 0.5;
+}
+
+.shop img.bought::after {
+    content: 'Куплено';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    background-color: black;
+    padding: 2px 5px;
+    font-size: 12px;
+    opacity: 0.7;
+}
+
+.category-title {
+    font-size: 18px;
+    margin-top: 10px;
+    color: #ffffff; /* Цвет заголовков категорий */
+}
+
+#increaseScoreBtn {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+}
+.falling-img {
+    position: absolute;
+    width: 70px; /* Увеличиваем ширину */
+    height: 70px; /* Увеличиваем высоту */
+}
+
+@media (max-width: 600px) {
+    #score {
+        font-size: 18px; /* Уменьшение размера текста на мобильных устройствах */
+    }
+}
+    </style>
+</head>
+<body>
+    <div id="game-area"></div>
+    <div id="score">Счет: 0</div>
+    <div class="control-buttons">
+        <button id="startBtn" class="btn btn-success">Start</button>
+        <button id="stopBtn" class="btn btn-danger">Stop</button>
+        <button id="shopBtn" class="btn btn-primary">Магазин</button>
+    </div>
+    <div class="shop card">
+        <div class="card-body">
+            <h5 class="card-title">Магазин</h5>
+            <div class="category-title">Картинки за 100 очков</div>
+            <img src="https://i.postimg.cc/Vv2XkGpf/photo-2024-03-14-22-02-30.jpg" alt="Картинка 1" data-cost="100" class="shop-item">
+            <img src="https://i.postimg.cc/DwSygfSM/photo-2024-11-05-16-44-49.jpg" alt="Картинка 2" data-cost="100" class="shop-item">
+            <div class="category-title">Картинки за 250 очков</div>
+            <img src="https://i.postimg.cc/264rs5v8/photo-2024-11-05-18-25-30.jpg" alt="Картинка 3" data-cost="250" class="shop-item">
+            <img src="https://i.postimg.cc/jqcrPm49/photo-2024-11-05-18-25-34.jpg" alt="Картинка 4" data-cost="250" class="shop-item">
+            <div class="category-title">Картинки за 500 очков</div>
+            <img src="https://i.postimg.cc/5y0rLwvr/photo-2024-11-05-22-11-27.jpg" alt="Картинка 5" data-cost="500" class="shop-item">
+            <img src="https://i.postimg.cc/CKQrYykZ/photo-2024-11-05-21-43-36.jpg" alt="Картинка 6" data-cost="500" class="shop-item">
+        </div>
+        <button id="closeShopBtn" class="btn btn-secondary">Закрыть</button>
+    </div>
+    <button id="increaseScoreBtn" class="btn btn-info">+100 Очков</button>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        let score = localStorage.getItem('score') ? parseInt(localStorage.getItem('score')) : 0;
+        document.getElementById('score').innerText = `Счет: ${score}`;
+        let gameInterval;
+        let initialImageSrc = 'https://i.postimg.cc/Vv2XkGpf/photo-2024-03-14-22-02-30.jpg';
+        let additionalImagesSrc = localStorage.getItem('additionalImagesSrc') ? JSON.parse(localStorage.getItem('additionalImagesSrc')) : [initialImageSrc];
+        let purchasedItems = JSON.parse(localStorage.getItem('purchasedItems')) || [];
+
+        function createFallingImage(src) {
+            const img = document.createElement('img');
+            img.src = src;
+            img.classList.add('falling-img');
+            img.style.left = `${Math.random() * window.innerWidth}px`;
+            img.style.top = '0px';
+            img.addEventListener('click', () => {
+                score++;
+                document.getElementById('score').innerText = `Счет: ${score}`;
+                localStorage.setItem('score', score);
+                img.remove();
+            });
+            document.getElementById('game-area').appendChild(img);
+            animateFallingImage(img);
+        }
+
+        function animateFallingImage(img) {
+            const fallSpeed = Math.random() * 5 + 2;
+            const fallInterval = setInterval(() => {
+                const currentTop = parseFloat(img.style.top);
+                if (currentTop < window.innerHeight - 50) {
+                    img.style.top = `${currentTop + fallSpeed}px`;
+                } else {
+                    img.remove();
+                    clearInterval(fallInterval);
+                }
+            }, 20);
+        }
+
+        function updatePurchasedItems() {
+            document.querySelectorAll('.shop-item').forEach(item => {
+                if (purchasedItems.includes(item.src)) {
+                    item.classList.add('bought');
+                }
+            });
+        }
+
+        document.getElementById('startBtn').addEventListener('click', () => {
+            if (!gameInterval) {
+                gameInterval = setInterval(() => {
+                    additionalImagesSrc.forEach(src => createFallingImage(src));
+                }, 1000);
+            }
+        });
+
+        document.getElementById('stopBtn').addEventListener('click', () => {
+            clearInterval(gameInterval);
+            gameInterval = null;
+        });
+
+        document.getElementById('shopBtn').addEventListener('click', () => {
+            document.querySelector('.shop').style.display = 'block';
+        });
+
+        document.getElementById('closeShopBtn').addEventListener('click', () => {
+            document.querySelector('.shop').style.display = 'none';
+        });
+
+        document.querySelectorAll('.shop-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const cost = parseInt(item.dataset.cost);
+                if (score >= cost) {
+                    score -= cost;
+                    document.getElementById('score').innerText = `Счет: ${score}`;
+                    localStorage.setItem('score', score);
+                    if (!additionalImagesSrc.includes(item.src)) {
+                        additionalImagesSrc.push(item.src);
+                    }
+                    item.classList.add('bought');
+                    purchasedItems.push(item.src);
+                    localStorage.setItem('purchasedItems', JSON.stringify(purchasedItems));
+                    localStorage.setItem('additionalImagesSrc', JSON.stringify(additionalImagesSrc));
+                    document.querySelector('.shop').style.display = 'none';
+                } else {
+                    alert('Недостаточно очков.');
+                }
+            });
+        });
+
+        document.getElementById('increaseScoreBtn').addEventListener('click', () => {
+            const password = prompt('Введите пароль:');
+            if (password === 'gay0909') {
+                score += 100;
+                document.getElementById('score').innerText = `Счет: ${score}`;
+                localStorage.setItem('score', score);
+            } else {
+                alert('Неправильный пароль!');
+            }
+        });
+
+        // Обновить состояние купленных предметов при загрузке страницы
+        updatePurchasedItems();
+        
+    </script>
+</body>
+</html>
